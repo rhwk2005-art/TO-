@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>통합 TO 현황 포털 V6.1</title>
+    <title>통합 TO 현황 포털 V6.1.1</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         /* [UI] V4.7.1의 고품격 네이비 테마 디자인 복구 */
@@ -50,7 +50,7 @@
         .btn-print { background-color: #555; color: white; }
         .btn-red-outline { background-color: #fff; color: #d32f2f; border: 1px solid #ddd; font-size: 11px; }
 
-        /* 표 디자인 및 색상 그룹화 */
+        /* 표 디자인 */
         .table-container { overflow-x: auto; background: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid #e1e4e8; }
         table { width: 100%; border-collapse: collapse; text-align: center; white-space: nowrap; font-size: 14px; }
         th { background-color: #0B2B5E; color: white; padding: 12px 10px; }
@@ -70,7 +70,6 @@
         .input-group label { display: block; font-size: 12px; font-weight: bold; margin-bottom: 4px; color: #555; }
         input, select, textarea { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
         
-        /* 지역 순서 관리 아이템 */
         .reg-item { display: flex; justify-content: space-between; align-items: center; background: #f8f9fa; padding: 8px 12px; border-radius: 6px; margin-bottom: 5px; border: 1px solid #eee; }
         .reg-controls { display: flex; gap: 5px; }
         .ctrl-btn { border: none; background: #fff; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; padding: 2px 6px; font-size: 12px; }
@@ -93,7 +92,7 @@
         <div class="header-container">
             <div style="display: flex; align-items: center;">
                 <button class="home-btn no-print" onclick="goHome()">🏠 홈으로</button>
-                <h2 id="branchTitle">사업부 로딩 중...</h2>
+                <h2 id="branchTitle">사업부 현황</h2>
             </div>
             <button class="btn btn-red-outline no-print" onclick="location.reload()" style="font-size:10px;">새로고침</button>
         </div>
@@ -170,7 +169,6 @@
         const supabaseKey = 'sb_publishable_fgRLgnrBmlAIAbEozTWAfg_-xWW3INd';
         const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-        // 초기 데이터 (클라우드 동기화 전 기본값)
         let branchList = ['대구 사업부', '경산 사업부'];
         let branchRegionData = { '대구 사업부': ['성서', '구지'], '경산 사업부': ['진량', '자인'] };
         let currentBranch = "";
@@ -179,16 +177,13 @@
 
         window.onload = () => { syncFromCloud(); };
 
-        // [클라우드 설정 연동]
         async function syncFromCloud() {
             const { data } = await supabaseClient.from('system_config').select('*').eq('config_key', 'main_settings').single();
             if (data && data.config_value) {
                 branchList = data.config_value.branchList;
                 branchRegionData = data.config_value.branchRegionData;
                 document.getElementById('loadingMsg').innerText = "동기화 완료";
-            } else {
-                await syncToCloud(); // 최초 1회 서버에 기본값 생성
-            }
+            } else { await syncToCloud(); }
             renderGate();
         }
 
@@ -212,7 +207,7 @@
         async function switchBranch(name) {
             const { data } = await supabaseClient.from('branch_access').select('password').eq('branch_name', name).single();
             if (data && data.password) {
-                const input = prompt(`'${name}' 보안 비밀번호를 입력하세요:`);
+                const input = prompt(`'${name}' 보안 비밀번호:`);
                 if (input !== data.password) { alert("비밀번호 불일치"); return; }
             }
             currentBranch = name;
@@ -250,17 +245,43 @@
             const db = document.getElementById('dashboard'); db.innerHTML = "";
             (branchRegionData[currentBranch] || []).forEach(reg => {
                 let count = 0; savedList.forEach(d => { if(d.region === reg) count += (d.to_count - (d.hired_count || 0)); });
-                db.innerHTML += `<div class="dash-card"><b>${reg} </b><span class="count">${count}명</span></div>`;
+                db.innerHTML += `<div class="dash-card"><b>${reg}</b><span class="count">${count}명</span></div>`;
             });
+        }
+
+        // --- [핵심] 수정된 삭제 함수들 ---
+        
+        async function deleteItem(id) {
+            if(confirm("이 행의 모든 데이터를 영구 삭제하시겠습니까?")) {
+                const { error } = await supabaseClient.from('job_requests').delete().eq('id', id);
+                if (error) { alert("삭제 실패: " + error.message); }
+                else { fetchData(); }
+            }
+        }
+
+        async function deleteCurrentBranch() {
+            if (branchList.length <= 1) { alert("최소 1개의 사업부는 유지되어야 합니다."); return; }
+            if (confirm(`'${currentBranch}' 사업부의 모든 설정을 삭제하시겠습니까? (데이터는 서버에 남습니다)`)) {
+                branchList = branchList.filter(b => b !== currentBranch);
+                delete branchRegionData[currentBranch];
+                await syncToCloud();
+                goHome();
+            }
+        }
+
+        async function deleteRegion(idx) {
+            if(confirm("이 지역을 목록에서 제거하시겠습니까?")) {
+                branchRegionData[currentBranch].splice(idx, 1);
+                await syncToCloud();
+                renderRegions(); fetchData();
+            }
         }
 
         // --- 기타 기능 함수들 ---
         async function addBranch() { const n = prompt("새 사업부 이름:"); if (n && !branchList.includes(n)) { branchList.push(n); branchRegionData[n] = []; await syncToCloud(); renderGate(); } }
-        async function deleteCurrentBranch() { if (branchList.length <= 1) return; if (confirm(`'${currentBranch}' 탭 삭제?`)) { branchList = branchList.filter(b => b !== currentBranch); delete branchRegionData[currentBranch]; await syncToCloud(); goHome(); } }
         function renderTabs() { const bar = document.getElementById('tabBar'); bar.innerHTML = ""; branchList.forEach(b => { const t = document.createElement('div'); t.className = `tab ${b === currentBranch ? 'active' : ''}`; t.innerText = b; t.onclick = () => switchBranch(b); bar.appendChild(t); }); const addBtn = document.createElement('div'); addBtn.className = "tab-add-btn"; addBtn.innerText = "+ 사업부 추가"; addBtn.onclick = addBranch; bar.appendChild(addBtn); }
         function renderRegions() { const sel = document.getElementById('newRegion'); sel.innerHTML = ""; const cont = document.getElementById('regionListContainer'); cont.innerHTML = ""; (branchRegionData[currentBranch] || []).forEach((r, idx) => { sel.innerHTML += `<option value="${r}">${r}</option>`; const div = document.createElement('div'); div.className = "reg-item"; div.innerHTML = `<span>${r}</span><div class="reg-controls"><button class="ctrl-btn" onclick="moveRegion(${idx}, -1)">▲</button><button class="ctrl-btn" onclick="moveRegion(${idx}, 1)">▼</button><button class="ctrl-btn" style="color:red;" onclick="deleteRegion(${idx})">×</button></div>`; cont.appendChild(div); }); }
         async function moveRegion(idx, dir) { let list = branchRegionData[currentBranch]; let target = idx + dir; if (target >= 0 && target < list.length) { [list[idx], list[target]] = [list[target], list[idx]]; await syncToCloud(); renderRegions(); fetchData(); } }
-        async function deleteRegion(idx) { if(confirm("삭제?")) { branchRegionData[currentBranch].splice(idx, 1); await syncToCloud(); renderRegions(); fetchData(); } }
         async function addRegion() { const n = document.getElementById('adminRegionName').value; if (n && !branchRegionData[currentBranch].includes(n)) { branchRegionData[currentBranch].push(n); document.getElementById('adminRegionName').value = ""; await syncToCloud(); renderRegions(); fetchData(); } }
         async function saveData() { const editId = document.getElementById('editId').value; const item = { branch: currentBranch, region: document.getElementById('newRegion').value, client: document.getElementById('newClient').value, process: document.getElementById('newProcess').value, shift: document.getElementById('newShift').value, gender: document.getElementById('newGender').value, to_count: Number(document.getElementById('newToCount').value), req_date: document.getElementById('newReqDate').value, note: document.getElementById('newNote').value }; if (editId) { await supabaseClient.from('job_requests').update(item).eq('id', editId); } else { item.hired_count = 0; item.status = '구인 중'; await supabaseClient.from('job_requests').insert([item]); } closeModal('toModal'); fetchData(); }
         async function updateHired(item) { let nextHired = (item.hired_count || 0) + 1; let nextStatus = item.status === '합격' ? '구인 중' : (nextHired >= item.to_count ? '합격' : '진행 중'); if (item.status === '합격') nextHired = 0; await supabaseClient.from('job_requests').update({ hired_count: nextHired, status: nextStatus }).eq('id', item.id); fetchData(); if (nextStatus !== '구인 중' && nextHired > (item.hired_count || 0)) { setTimeout(() => openOnboarderModal(savedList.find(i => i.id === item.id)), 300); } }
