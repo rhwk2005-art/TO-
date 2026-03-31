@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>통합 TO 현황 관리 시스템 V4.7</title>
+    <title>통합 TO 현황 관리 시스템 V4.7.1</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         /* [UI] 기존 스타일 유지 */
@@ -39,7 +39,6 @@
         .status-partial { background-color: #fff3e0; color: #ef6c00; border-color: #ffcc80; }
         .info-record-btn { background: white; color: #2E7D32; font-size: 11px; padding: 4px 8px; border-radius: 6px; cursor: pointer; margin-top: 6px; display: inline-block; border: 1px solid #A5D6A7; font-weight: bold; }
 
-        /* [UI] 모달 */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 10px; }
         .modal-content { background: white; padding: 25px; border-radius: 10px; width: 100%; max-width: 420px; position: relative; max-height: 90vh; overflow-y: auto; }
         .input-group { margin-bottom: 12px; text-align: left; }
@@ -47,7 +46,6 @@
         input, select, textarea { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
         textarea { height: 100px; resize: none; font-family: inherit; }
 
-        /* [신규] 지역 관리 버튼 스타일 */
         .reg-item { display: flex; justify-content: space-between; align-items: center; background: #f8f9fa; padding: 8px 12px; border-radius: 6px; margin-bottom: 5px; border: 1px solid #eee; }
         .reg-name { font-weight: bold; font-size: 14px; }
         .reg-controls { display: flex; gap: 5px; }
@@ -91,7 +89,7 @@
     
     <div id="regionModal" class="modal-overlay">
         <div class="modal-content">
-            <h3>📍 지역 및 순서 관리</h3>
+            <h3>📍 <span id="regModalBranch"></span> 지역 관리</h3>
             <div class="input-group">
                 <label>새 지역 추가</label>
                 <div style="display: flex; gap: 5px;">
@@ -99,8 +97,8 @@
                     <button class="btn btn-main" style="white-space:nowrap;" onclick="addRegion()">추가</button>
                 </div>
             </div>
-            <p style="font-size: 11px; color: #888; margin-bottom: 10px;">▲ ▼ 버튼을 눌러 표에 표시될 순서를 정하세요.</p>
-            <div id="regionListContainer" style="margin-top:10px;"></div>
+            <p style="font-size: 11px; color: #888; margin-bottom: 10px;">▲ ▼ 버튼을 눌러 순서를 정하세요.</p>
+            <div id="regionListContainer"></div>
             <button class="btn btn-sub" style="width:100%; margin-top:20px;" onclick="closeModal('regionModal')">닫기</button>
         </div>
     </div>
@@ -131,24 +129,18 @@
         }
 
         async function fetchData() {
-            // [변경] SQL 정렬 대신 자바스크립트에서 수동 정렬하기 위해 데이터를 가져옵니다.
             const { data } = await supabaseClient.from('job_requests').select('*').eq('branch', currentBranch);
-            
-            // [핵심 로직] 사용자가 정의한 지역 순서에 맞춰 데이터 정렬
             const regionOrder = branchRegionData[currentBranch] || [];
             if (data) {
                 data.sort((a, b) => {
                     const idxA = regionOrder.indexOf(a.region);
                     const idxB = regionOrder.indexOf(b.region);
-                    // 목록에 없는 지역은 뒤로 보냅니다.
                     const valA = idxA === -1 ? 999 : idxA;
                     const valB = idxB === -1 ? 999 : idxB;
                     return valA - valB;
                 });
             }
-
-            savedList = data || []; 
-            renderTable(); renderDashboard();
+            savedList = data || []; renderTable(); renderDashboard();
         }
 
         function renderTable() {
@@ -156,15 +148,12 @@
             let currentRegions = branchRegionData[currentBranch] || [];
             const colorMap = {};
             currentRegions.forEach((reg, idx) => { colorMap[reg] = regionColors[idx % regionColors.length]; });
-
             savedList.forEach(item => {
                 let row = body.insertRow(-1);
                 if (colorMap[item.region]) row.style.backgroundColor = colorMap[item.region];
-                row.insertCell(0).innerText = item.region;
-                row.insertCell(1).innerText = item.client;
+                row.insertCell(0).innerText = item.region; row.insertCell(1).innerText = item.client;
                 row.insertCell(2).innerText = item.process; 
-                let toCell = row.insertCell(3);
-                toCell.innerHTML = `<b>${item.hired_count || 0} / ${item.to_count}</b>`;
+                let toCell = row.insertCell(3); toCell.innerHTML = `<b>${item.hired_count || 0} / ${item.to_count}</b>`;
                 if ((item.hired_count || 0) > 0) toCell.innerHTML += `<br><span class="info-record-btn" onclick='openOnboarderModal(${JSON.stringify(item)})'>📝 합격자정보</span>`;
                 let dCell = row.insertCell(4); dCell.innerText = item.req_date;
                 if (item.status !== '합격' && (new Date() - new Date(item.req_date)) / 86400000 >= 7) dCell.className="urgent-text";
@@ -177,46 +166,29 @@
             });
         }
 
-        // [핵심] 지역 렌더링 (순서 변경 UI 포함)
         function renderRegions() {
             const sel = document.getElementById('newRegion'); sel.innerHTML = "";
             const listContainer = document.getElementById('regionListContainer'); listContainer.innerHTML = "";
             let currentRegions = branchRegionData[currentBranch] || [];
-
             currentRegions.forEach((r, idx) => {
-                // 등록창 드롭다운 생성
                 sel.innerHTML += `<option value="${r}">${r}</option>`;
-
-                // 관리창 리스트 아이템 생성
                 const itemDiv = document.createElement('div');
                 itemDiv.className = "reg-item";
-                itemDiv.innerHTML = `
-                    <span class="reg-name">${r}</span>
-                    <div class="reg-controls">
-                        <button class="ctrl-btn" onclick="moveRegion(${idx}, -1)">▲</button>
-                        <button class="ctrl-btn" onclick="moveRegion(${idx}, 1)">▼</button>
-                        <button class="ctrl-btn" style="color:red; margin-left:5px;" onclick="deleteRegion(${idx})">×</button>
-                    </div>
-                `;
+                itemDiv.innerHTML = `<span class="reg-name">${r}</span><div class="reg-controls"><button class="ctrl-btn" onclick="moveRegion(${idx}, -1)">▲</button><button class="ctrl-btn" onclick="moveRegion(${idx}, 1)">▼</button><button class="ctrl-btn" style="color:red; margin-left:5px;" onclick="deleteRegion(${idx})">×</button></div>`;
                 listContainer.appendChild(itemDiv);
             });
             localStorage.setItem('branchRegionData', JSON.stringify(branchRegionData));
         }
 
-        // [핵심] 지역 순서 이동 함수
         function moveRegion(index, direction) {
             let list = branchRegionData[currentBranch];
             let targetIndex = index + direction;
-            if (targetIndex < 0 || targetIndex >= list.length) return; // 범위를 벗어나면 중단
-
-            // 위치 바꾸기
+            if (targetIndex < 0 || targetIndex >= list.length) return;
             [list[index], list[targetIndex]] = [list[targetIndex], list[index]];
-            
-            renderRegions();
-            fetchData(); // 표 순서도 즉시 갱신
+            renderRegions(); fetchData();
         }
 
-        // --- 나머지 기존 함수들 ---
+        // --- 기타 함수들 ---
         function renderTabs() { const bar = document.getElementById('tabBar'); bar.innerHTML = ""; branchList.forEach(b => { const t = document.createElement('div'); t.className = `tab ${b === currentBranch ? 'active' : ''}`; t.innerText = b; t.onclick = () => switchBranch(b); bar.appendChild(t); }); const addBtn = document.createElement('div'); addBtn.className = "tab-add-btn"; addBtn.innerText = "+ 사업부 추가"; addBtn.onclick = addBranch; bar.appendChild(addBtn); }
         async function saveData() { const editId = document.getElementById('editId').value; const item = { branch: currentBranch, region: document.getElementById('newRegion').value, client: document.getElementById('newClient').value, process: document.getElementById('newProcess').value, shift: document.getElementById('newShift').value, gender: document.getElementById('newGender').value, to_count: Number(document.getElementById('newToCount').value), req_date: document.getElementById('newReqDate').value, note: document.getElementById('newNote').value }; let error; if (editId) { const { error: err } = await supabaseClient.from('job_requests').update(item).eq('id', editId); error = err; } else { item.hired_count = 0; item.status = '구인 중'; const { error: err } = await supabaseClient.from('job_requests').insert([item]); error = err; } if (!error) { closeModal('toModal'); fetchData(); } }
         async function updateHired(item) { let nextHired = (item.hired_count || 0) + 1; let nextStatus = item.status === '합격' ? '구인 중' : (nextHired >= item.to_count ? '합격' : '진행 중'); if (item.status === '합격') nextHired = 0; const { error } = await supabaseClient.from('job_requests').update({ hired_count: nextHired, status: nextStatus }).eq('id', item.id); if (!error) { if (nextHired > (item.hired_count || 0)) { fetchData(); setTimeout(() => { openOnboarderModal(savedList.find(i => i.id === item.id)); }, 300); } else { fetchData(); } } }
@@ -225,12 +197,16 @@
         function openEditModal(item) { openModal('toModal'); document.getElementById('modalModeTitle').innerText = "현황 수정"; document.getElementById('editId').value = item.id; document.getElementById('newRegion').value = item.region; document.getElementById('newClient').value = item.client; document.getElementById('newProcess').value = item.process; document.getElementById('newShift').value = item.shift || ""; document.getElementById('newGender').value = item.gender || "무관"; document.getElementById('newToCount').value = item.to_count; document.getElementById('newReqDate').value = item.req_date; document.getElementById('newNote').value = item.note || ""; }
         function downloadExcel() { let csv = "\uFEFF지역,거래처,공정,근무형태,성별,채용수,TO,요청일,상태,비고,입사자정보\n"; savedList.forEach(i => { csv += `${i.region},${i.client},${i.process},${i.shift},${i.gender},${i.hired_count},${i.to_count},${i.req_date},${i.status},${(i.note||"").replace(/,/g," ")},${(i.onboarder_info||"").replace(/,/g," ")}\n`; }); const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' }); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `${currentBranch}_현황_${new Date().toISOString().substring(0,10)}.csv`; link.click(); }
         function renderDashboard() { const db = document.getElementById('dashboard'); db.innerHTML = ""; let currentRegions = branchRegionData[currentBranch] || []; let summary = {}; currentRegions.forEach(reg => summary[reg] = 0); savedList.forEach(data => { if (summary[data.region] !== undefined) summary[data.region] += (data.to_count - (data.hired_count || 0)); }); for (let r in summary) db.innerHTML += `<div class="dash-card"><b>${r}</b><span class="count">${summary[r]}명</span></div>`; }
-        function addRegion() { const name = document.getElementById('adminRegionName').value; if (name && !branchRegionData[currentBranch].includes(name)) { branchRegionData[currentBranch].push(name); document.getElementById('adminRegionName').value = ""; localStorage.setItem('branchRegionData', JSON.stringify(branchRegionData)); renderRegions(); fetchData(); } }
-        function deleteRegion(idx) { if(confirm("삭제?")) { branchRegionData[currentBranch].splice(idx, 1); localStorage.setItem('branchRegionData', JSON.stringify(branchRegionData)); renderRegions(); fetchData(); } }
+        function addRegion() { const name = document.getElementById('adminRegionName').value; if (name && !branchRegionData[currentBranch].includes(name)) { branchRegionData[currentBranch].push(name); document.getElementById('adminRegionName').value = ""; renderRegions(); fetchData(); } }
+        function deleteRegion(idx) { if(confirm("삭제?")) { branchRegionData[currentBranch].splice(idx, 1); renderRegions(); fetchData(); } }
         function addBranch() { const n = prompt("새 사업부 이름:"); if (n && !branchList.includes(n)) { branchList.push(n); branchRegionData[n] = []; localStorage.setItem('myBranchList', JSON.stringify(branchList)); localStorage.setItem('branchRegionData', JSON.stringify(branchRegionData)); switchBranch(n); } }
         function deleteCurrentBranch() { if (branchList.length <= 1) return; if (confirm(`삭제?`)) { branchList = branchList.filter(b => b !== currentBranch); delete branchRegionData[currentBranch]; localStorage.setItem('myBranchList', JSON.stringify(branchList)); localStorage.setItem('branchRegionData', JSON.stringify(branchRegionData)); switchBranch(branchList[0]); } }
         async function deleteItem(id) { if(confirm("삭제?")) { await supabaseClient.from('job_requests').delete().eq('id', id); fetchData(); } }
-        function openModal(id) { if(id === 'toModal') { document.getElementById('modalModeTitle').innerText = "신규 등록"; document.getElementById('editId').value = ""; document.getElementById('newReqDate').value = new Date().toISOString().substring(0, 10); ['newClient', 'newProcess', 'newShift', 'newNote'].forEach(id => document.getElementById(id).value = ""); document.getElementById('newGender').value = "무관"; document.getElementById('newToCount').value = 1; } if(id === 'regionModal') document.getElementById('regModalBranch').innerText = currentBranch; document.getElementById(id).style.display = 'flex'; }
+        function openModal(id) { 
+            if(id === 'toModal') { document.getElementById('modalModeTitle').innerText = "신규 등록"; document.getElementById('editId').value = ""; document.getElementById('newReqDate').value = new Date().toISOString().substring(0, 10); ['newClient', 'newProcess', 'newShift', 'newNote'].forEach(id => document.getElementById(id).value = ""); document.getElementById('newGender').value = "무관"; document.getElementById('newToCount').value = 1; }
+            if(id === 'regionModal') document.getElementById('regModalBranch').innerText = currentBranch;
+            document.getElementById(id).style.display = 'flex'; 
+        }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
     </script>
 </body>
