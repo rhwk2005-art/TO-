@@ -3,32 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>통합 TO 현황 관리 시스템 V3.6</title>
+    <title>통합 TO 현황 관리 시스템 V3.7</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* [디자인] 기업형 클래식 네이비 테마 */
+        /* [UI] 기업형 클래식 네이비 테마 */
         body { font-family: '맑은 고딕', sans-serif; padding: 20px; background-color: #f5f7fa; color: #333; margin: 0; line-height: 1.5; }
         .header-container { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #0B2B5E; padding-bottom: 15px; margin-bottom: 20px; }
         h2 { color: #0B2B5E; margin: 0; font-weight: 800; font-size: 1.5rem; }
         
-        /* [UI] 탭 메뉴 - 모바일 스크롤 및 추가 버튼 포함 */
+        /* [UI] 탭 메뉴 */
         .tab-container { display: flex; gap: 5px; margin-bottom: 20px; border-bottom: 2px solid #dee2e6; overflow-x: auto; -webkit-overflow-scrolling: touch; align-items: center; }
         .tab { padding: 12px 20px; cursor: pointer; background: #e9ecef; border-radius: 8px 8px 0 0; font-weight: bold; color: #6c757d; border: 1px solid #dee2e6; border-bottom: none; white-space: nowrap; font-size: 14px; transition: 0.2s; }
         .tab.active { background: #0B2B5E; color: white; border-color: #0B2B5E; }
         .tab-add-btn { padding: 8px 12px; cursor: pointer; color: #0B2B5E; font-weight: bold; border: 1px dashed #0B2B5E; background: white; border-radius: 4px; font-size: 12px; white-space: nowrap; margin-bottom: 5px; }
 
-        .dashboard-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 20px; }
+        /* [UI] 대시보드 */
+        .dashboard-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 20px; }
         .dash-card { background: white; border-top: 4px solid #0B2B5E; border-radius: 6px; padding: 15px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .dash-card b { color: #8A9097; font-size: 12px; display: block; margin-bottom: 3px; }
         .dash-card .count { font-size: 22px; font-weight: bold; color: #0B2B5E; }
         
-        .action-bar { display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap; justify-content: flex-end; }
-        .btn { padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; display: inline-flex; align-items: center; gap: 5px; }
+        /* [UI] 기능 버튼 바 */
+        .action-bar { display: flex; gap: 6px; margin-bottom: 15px; flex-wrap: wrap; justify-content: flex-end; }
+        .btn { padding: 10px 14px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px; display: inline-flex; align-items: center; gap: 5px; transition: 0.2s; }
         .btn-main { background-color: #0B2B5E; color: white; }
         .btn-sub { background-color: #8A9097; color: white; }
         .btn-green { background-color: #28a745; color: white; }
+        .btn-print { background-color: #555; color: white; }
         .btn-red-outline { background-color: #fff; color: #d32f2f; border: 1px solid #ddd; font-size: 11px; }
 
+        /* [UI] 데이터 표 */
         .table-container { overflow-x: auto; background: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid #e1e4e8; }
         table { width: 100%; border-collapse: collapse; text-align: center; white-space: nowrap; font-size: 14px; }
         th { background-color: #0B2B5E; color: white; padding: 12px 10px; }
@@ -40,31 +44,40 @@
         .status-partial { background-color: #fff3e0; color: #ef6c00; border-color: #ffcc80; }
         .urgent-text { color: #d32f2f; font-weight: bold; }
 
+        /* [UI] 모달 */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 10px; }
         .modal-content { background: white; padding: 25px; border-radius: 10px; width: 100%; max-width: 400px; position: relative; }
         .input-group { margin-bottom: 12px; }
         .input-group label { display: block; font-size: 12px; font-weight: bold; margin-bottom: 4px; color: #555; }
         input, select { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
 
-        @media print { .action-bar, .tab-container, .btn, .tab-add-btn, .no-print { display: none !important; } }
-        @media (max-width: 600px) { h2 { font-size: 1.1rem; } .action-bar { justify-content: space-between; } .btn { flex: 1; } }
+        /* [인쇄 전용] 출력 시 버튼들 숨기기 */
+        @media print {
+            .action-bar, .tab-container, .btn, .tab-add-btn, .no-print, .header-container button { display: none !important; }
+            body { background: white; padding: 0; }
+            .table-container { box-shadow: none; border: none; }
+            th { background-color: #eee !important; color: black !important; border: 1px solid #333; }
+            td { border: 1px solid #333; }
+            h2 { margin-bottom: 20px; text-align: center; }
+        }
+        @media (max-width: 600px) { h2 { font-size: 1.1rem; } .action-bar { justify-content: center; } .btn { flex: 1; min-width: 80px; } }
     </style>
 </head>
 <body>
 
     <div class="header-container">
-        <h2 id="branchTitle">사업부 로딩 중...</h2>
-        <button class="btn btn-red-outline no-print" onclick="location.reload()">새로고침</button>
+        <h2 id="branchTitle">사업부 현황</h2>
+        <button class="btn btn-red-outline no-print" onclick="location.reload()" style="font-size:10px;">새로고침</button>
     </div>
 
     <div class="tab-container" id="tabBar"></div>
-
     <div id="dashboard" class="dashboard-container"></div>
 
     <div class="action-bar no-print">
         <button class="btn btn-red-outline" onclick="deleteCurrentBranch()">🗑️ 사업부 삭제</button>
         <button class="btn btn-sub" onclick="openModal('regionModal')">⚙️ 지역 설정</button>
         <button class="btn btn-green" onclick="downloadExcel()">📊 엑셀 저장</button>
+        <button class="btn btn-print" onclick="window.print()">🖨️ 인쇄 출력</button>
         <button class="btn btn-main" onclick="openModal('toModal')">➕ 신규 등록</button>
     </div>
 
@@ -83,8 +96,8 @@
         <div class="modal-content">
             <h3 style="margin-top:0; color:#0B2B5E;">📝 신규 등록 (<span id="modalBranch"></span>)</h3>
             <div class="input-group"><label>지역</label><select id="newRegion"></select></div>
-            <div class="input-group"><label>거래처</label><input type="text" id="newClient" placeholder="업체명"></div>
-            <div class="input-group"><label>공정</label><input type="text" id="newProcess" placeholder="프레스, 조립 등"></div>
+            <div class="input-group"><label>거래처</label><input type="text" id="newClient"></div>
+            <div class="input-group"><label>공정</label><input type="text" id="newProcess"></div>
             <div style="display: flex; gap: 10px;">
                 <div class="input-group" style="width: 50%;"><label>성별</label><select id="newGender"><option value="무관">무관</option><option value="남">남</option><option value="여">여</option></select></div>
                 <div class="input-group" style="flex: 1;"><label>인원(명)</label><input type="number" id="newToCount" min="1" value="1"></div>
@@ -98,13 +111,10 @@
     <div id="regionModal" class="modal-overlay">
         <div class="modal-content">
             <h3 style="margin-top:0;">📍 지역 설정 관리</h3>
-            <div class="input-group">
-                <label>현재 사업부: <span id="regModalBranch"></span></label>
-                <input type="text" id="adminRegionName" placeholder="새로운 지역 이름">
-            </div>
-            <button class="btn btn-main" style="width:100%;" onclick="addRegion()">지역 추가</button>
-            <div id="regionTags" style="margin-top:20px; line-height:2.2;"></div>
-            <button class="btn btn-sub" style="width:100%; margin-top:20px;" onclick="closeModal('regionModal')">닫기</button>
+            <div class="input-group"><label>현재 사업부: <span id="regModalBranch"></span></label><input type="text" id="adminRegionName" placeholder="새 지역"></div>
+            <button class="btn btn-main" style="width:100%;" onclick="addRegion()">추가</button>
+            <div id="regionTags" style="margin-top:15px; line-height:2.2;"></div>
+            <button class="btn btn-sub" style="width:100%; margin-top:15px;" onclick="closeModal('regionModal')">닫기</button>
         </div>
     </div>
 
@@ -119,30 +129,6 @@
         let branchRegionData = JSON.parse(localStorage.getItem('branchRegionData')) || { '대구 사업부': ['성서', '구지'], '경산 사업부': ['진량', '자인'] };
 
         window.onload = () => { renderTabs(); switchBranch(branchList[0]); };
-
-        // [복구] 사업부 추가 기능
-        function addBranch() {
-            const name = prompt("새로운 사업부 이름을 입력하세요 (예: 양산 사업부)");
-            if (name && !branchList.includes(name)) {
-                branchList.push(name);
-                branchRegionData[name] = []; // 빈 지역 리스트 생성
-                localStorage.setItem('myBranchList', JSON.stringify(branchList));
-                localStorage.setItem('branchRegionData', JSON.stringify(branchRegionData));
-                switchBranch(name);
-            }
-        }
-
-        // [복구] 사업부 삭제 기능
-        function deleteCurrentBranch() {
-            if (branchList.length <= 1) { alert("최소 한 개의 사업부 탭은 남겨두어야 합니다."); return; }
-            if (confirm(`'${currentBranch}' 탭을 삭제하시겠습니까?\n(서버의 데이터는 유지되지만 탭 목록에서만 사라집니다)`)) {
-                branchList = branchList.filter(b => b !== currentBranch);
-                delete branchRegionData[currentBranch];
-                localStorage.setItem('myBranchList', JSON.stringify(branchList));
-                localStorage.setItem('branchRegionData', JSON.stringify(branchRegionData));
-                switchBranch(branchList[0]);
-            }
-        }
 
         async function switchBranch(name) {
             const { data } = await supabaseClient.from('branch_access').select('password').eq('branch_name', name).single();
@@ -164,12 +150,9 @@
                 t.onclick = () => switchBranch(b);
                 bar.appendChild(t);
             });
-            // [복구] 탭 바 끝에 추가 버튼 배치
             const addBtn = document.createElement('div');
-            addBtn.className = "tab-add-btn";
-            addBtn.innerText = "+ 사업부 추가";
-            addBtn.onclick = addBranch;
-            bar.appendChild(addBtn);
+            addBtn.className = "tab-add-btn"; addBtn.innerText = "+ 사업부 추가";
+            addBtn.onclick = addBranch; bar.appendChild(addBtn);
         }
 
         async function fetchData() {
@@ -198,10 +181,8 @@
         }
 
         function downloadExcel() {
-            let csv = "\uFEFF지역,거래처,공정,합격수,전체TO,요청일,상태,비고\n";
-            savedList.forEach(i => {
-                csv += `${i.region},${i.client},${i.process},${i.hired_count},${i.to_count},${i.req_date},${i.status},${(i.note||"").replace(/,/g," ")}\n`;
-            });
+            let csv = "\uFEFF지역,거래처,공정,채용수,TO,요청일,상태,비고\n";
+            savedList.forEach(i => { csv += `${i.region},${i.client},${i.process},${i.hired_count},${i.to_count},${i.req_date},${i.status},${(i.note||"").replace(/,/g," ")}\n`; });
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
@@ -229,40 +210,56 @@
             fetchData();
         }
 
-        async function deleteItem(id) { if(confirm("삭제할까요?")) { await supabaseClient.from('job_requests').delete().eq('id', id); fetchData(); } }
-        
+        function addBranch() {
+            const n = prompt("새 사업부 이름:");
+            if (n && !branchList.includes(n)) {
+                branchList.push(n); branchRegionData[n] = [];
+                localStorage.setItem('myBranchList', JSON.stringify(branchList));
+                localStorage.setItem('branchRegionData', JSON.stringify(branchRegionData));
+                switchBranch(n);
+            }
+        }
+        function deleteCurrentBranch() {
+            if (branchList.length <= 1) return;
+            if (confirm(`'${currentBranch}' 탭 삭제?`)) {
+                branchList = branchList.filter(b => b !== currentBranch);
+                delete branchRegionData[currentBranch];
+                localStorage.setItem('myBranchList', JSON.stringify(branchList));
+                localStorage.setItem('branchRegionData', JSON.stringify(branchRegionData));
+                switchBranch(branchList[0]);
+            }
+        }
         function renderDashboard() {
             const db = document.getElementById('dashboard'); db.innerHTML = "";
             let summary = {}; (branchRegionData[currentBranch] || []).forEach(r => summary[r] = 0);
             savedList.forEach(i => { if (summary[i.region] !== undefined) summary[i.region] += (i.to_count - (i.hired_count || 0)); });
             for (let r in summary) db.innerHTML += `<div class="dash-card"><b>${r}</b><span class="count">${summary[r]}명</span></div>`;
         }
-
         function renderRegions() {
             const sel = document.getElementById('newRegion'); sel.innerHTML = "";
-            (branchRegionData[currentBranch] || []).sort().forEach(r => { sel.innerHTML += `<option value="${r}">${r}</option>`; });
             const tags = document.getElementById('regionTags'); tags.innerHTML = "";
             (branchRegionData[currentBranch] || []).sort().forEach((r, idx) => {
+                sel.innerHTML += `<option value="${r}">${r}</option>`;
                 tags.innerHTML += `<span style="background:#eee; padding:5px 10px; border-radius:4px; margin-right:8px; display:inline-block; font-size:13px; margin-bottom:5px;">${r} <button onclick="deleteRegion(${idx})" style="border:none; color:red; cursor:pointer; background:none; font-weight:bold;">×</button></span>`;
             });
         }
-
         function addRegion() {
-            const name = document.getElementById('adminRegionName').value;
-            if (name && !branchRegionData[currentBranch].includes(name)) {
-                branchRegionData[currentBranch].push(name);
+            const n = document.getElementById('adminRegionName').value;
+            if (n && !branchRegionData[currentBranch].includes(n)) {
+                branchRegionData[currentBranch].push(n);
                 document.getElementById('adminRegionName').value = "";
                 localStorage.setItem('branchRegionData', JSON.stringify(branchRegionData));
                 renderRegions();
             }
         }
         function deleteRegion(idx) {
-            if(confirm("이 지역을 삭제하시겠습니까?")) {
+            if(confirm("삭제?")) {
                 branchRegionData[currentBranch].splice(idx, 1);
                 localStorage.setItem('branchRegionData', JSON.stringify(branchRegionData));
                 renderRegions();
             }
         }
+        async function deleteItem(id) { if(confirm("삭제?")) { await supabaseClient.from('job_requests').delete().eq('id', id); fetchData(); } }
         function openModal(id) { 
             if(id === 'toModal') document.getElementById('modalBranch').innerText = currentBranch; 
             if(id === 'regionModal') document.getElementById('regModalBranch').innerText = currentBranch;
