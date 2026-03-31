@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>통합 TO 현황 관리 시스템 V4.0</title>
+    <title>통합 TO 현황 관리 시스템 V4.5</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         /* [UI] 기존 스타일 유지 및 보완 */
@@ -34,13 +34,17 @@
         .status-ing { background-color: #e3f2fd; color: #1565c0; border-color: #90caf9; }
         .status-done { background-color: #f5f5f5; color: #616161; border-color: #e0e0e0; }
         .status-partial { background-color: #fff3e0; color: #ef6c00; border-color: #ffcc80; }
-        .info-badge { background: #E8F5E9; color: #2E7D32; font-size: 10px; padding: 2px 6px; border-radius: 10px; cursor: pointer; margin-top: 4px; display: inline-block; }
+        
+        /* [신규] 명단 기록 버튼 스타일 */
+        .info-record-btn { background: #E8F5E9; color: #2E7D32; font-size: 11px; padding: 4px 8px; border-radius: 6px; cursor: pointer; margin-top: 6px; display: inline-block; border: 1px solid #A5D6A7; font-weight: bold; }
+        .info-record-btn:hover { background: #C8E6C9; }
+
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 10px; }
         .modal-content { background: white; padding: 25px; border-radius: 10px; width: 100%; max-width: 420px; position: relative; max-height: 90vh; overflow-y: auto; }
         .input-group { margin-bottom: 12px; text-align: left; }
         .input-group label { display: block; font-size: 12px; font-weight: bold; margin-bottom: 4px; color: #555; }
         input, select, textarea { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
-        textarea { height: 80px; resize: none; font-family: inherit; }
+        textarea { height: 100px; resize: none; font-family: inherit; }
         @media print { .action-bar, .tab-container, .btn, .tab-add-btn, .no-print { display: none !important; } th { background-color: #eee !important; color: black !important; border: 1px solid #333; } td { border: 1px solid #333; } }
     </style>
 </head>
@@ -75,25 +79,36 @@
 
     <div id="toModal" class="modal-overlay">
         <div class="modal-content">
-            <h3 style="margin-top:0; color:#0B2B5E;"><span id="modalModeTitle">신규 등록</span> (<span id="modalBranch"></span>)</h3>
-            <input type="hidden" id="editId"> <div class="input-group"><label>지역</label><select id="newRegion"></select></div>
+            <h3 style="margin-top:0; color:#0B2B5E;"><span id="modalModeTitle">신규 등록</span></h3>
+            <input type="hidden" id="editId">
+            <div class="input-group"><label>지역</label><select id="newRegion"></select></div>
             <div class="input-group"><label>거래처</label><input type="text" id="newClient"></div>
             <div class="input-group"><label>공정</label><input type="text" id="newProcess"></div>
-            <div class="input-group"><label>근무형태</label><input type="text" id="newShift" placeholder="예: 주간, 2교대"></div>
+            <div class="input-group"><label>근무형태</label><input type="text" id="newShift"></div>
             <div style="display: flex; gap: 10px;">
                 <div class="input-group" style="width: 50%;"><label>성별</label><select id="newGender"><option value="무관">무관</option><option value="남">남</option><option value="여">여</option></select></div>
                 <div class="input-group" style="flex: 1;"><label>인원(명)</label><input type="number" id="newToCount" min="1"></div>
             </div>
             <div class="input-group"><label>요청일</label><input type="date" id="newReqDate"></div>
             <div class="input-group"><label>비고</label><input type="text" id="newNote"></div>
-            
-            <div class="input-group">
-                <label>입사자 정보 (합격 시 기록)</label>
-                <textarea id="onboarderInfo" placeholder="입사자 이름, 연락처 등을 기록하세요."></textarea>
-            </div>
-
             <button class="btn btn-main" style="width:100%;" onclick="saveData()">저장하기</button>
             <button class="btn btn-sub" style="width:100%; margin-top:10px;" onclick="closeModal('toModal')">취소</button>
+        </div>
+    </div>
+
+    <div id="onboarderModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 style="margin-top:0; color:#2E7D32;">👤 입사자 명단 관리</h3>
+            <p id="onboarderTargetInfo" style="font-size: 13px; color: #666; margin-bottom: 15px;"></p>
+            <input type="hidden" id="onboarderEditId">
+            
+            <div class="input-group">
+                <label>입사자 성함 및 연락처 (메모)</label>
+                <textarea id="onboarderInput" placeholder="예: 홍길동(010-1234-5678) - 4/1 입사"></textarea>
+            </div>
+            
+            <button class="btn btn-green" style="width:100%;" onclick="saveOnboarderInfo()">정보 업데이트</button>
+            <button class="btn btn-sub" style="width:100%; margin-top:10px;" onclick="closeModal('onboarderModal')">닫기</button>
         </div>
     </div>
 
@@ -143,11 +158,11 @@
                 row.insertCell(0).innerText = item.region; row.insertCell(1).innerText = item.client;
                 row.insertCell(2).innerText = item.process; 
                 
+                // [수정] 채용 인원 칸에 정보 입력 버튼 배치
                 let toCell = row.insertCell(3);
                 toCell.innerHTML = `<b>${item.hired_count || 0} / ${item.to_count}</b>`;
-                // [신규] 입사자 정보가 있으면 뱃지 표시
-                if (item.onboarder_info) {
-                    toCell.innerHTML += `<br><span class="info-badge" onclick='alert("입사자 정보:\\n${item.onboarder_info.replace(/\n/g, "\\n")}")'>👤 정보보기</span>`;
+                if ((item.hired_count || 0) > 0) {
+                    toCell.innerHTML += `<br><span class="info-record-btn" onclick='openOnboarderModal(${JSON.stringify(item)})'>📝 합격자정보</span>`;
                 }
 
                 let dCell = row.insertCell(4); dCell.innerText = item.req_date;
@@ -160,7 +175,6 @@
                 row.insertCell(6).innerText = item.note || '-';
                 
                 let mCell = row.insertCell(7); mCell.className = "no-print";
-                // [수정] 수정 버튼 추가
                 mCell.innerHTML = `
                     <button class="btn btn-edit" style="padding:4px 8px; font-size:11px;" onclick='openEditModal(${JSON.stringify(item)})'>수정</button>
                     <button class="btn-red-outline" style="padding:4px 8px; font-size:11px;" onclick="deleteItem(${item.id})">삭제</button>
@@ -168,7 +182,79 @@
             });
         }
 
-        // [신규] 수정 모달 열기
+        // [신규 로직] 입사자 정보 팝업 열기
+        function openOnboarderModal(item) {
+            document.getElementById('onboarderEditId').value = item.id;
+            document.getElementById('onboarderTargetInfo').innerText = `${item.client} [${item.process}] - 현재 ${item.hired_count}명 채용`;
+            document.getElementById('onboarderInput').value = item.onboarder_info || "";
+            document.getElementById('onboarderModal').style.display = 'flex';
+        }
+
+        // [신규 로직] 입사자 정보만 따로 저장
+        async function saveOnboarderInfo() {
+            const dbId = document.getElementById('onboarderEditId').value;
+            const infoText = document.getElementById('onboarderInput').value;
+            
+            const { error } = await supabaseClient.from('job_requests')
+                .update({ onboarder_info: infoText })
+                .eq('id', dbId);
+
+            if (!error) {
+                closeModal('onboarderModal');
+                fetchData();
+            } else {
+                alert("저장 실패: " + error.message);
+            }
+        }
+
+        // [핵심 변경] 합격/진행 상태로 바뀔 때 자동으로 팝업 띄우기
+        async function updateHired(item) {
+            let nextHired = (item.hired_count || 0) + 1;
+            let nextStatus = '구인 중';
+            
+            if (item.status === '합격') {
+                // 리셋 로직
+                nextHired = 0;
+                nextStatus = '구인 중';
+            } else {
+                nextStatus = nextHired >= item.to_count ? '합격' : '진행 중';
+            }
+
+            const { error } = await supabaseClient.from('job_requests')
+                .update({ hired_count: nextHired, status: nextStatus })
+                .eq('id', item.id);
+            
+            if (!error) {
+                // 인원이 늘어난 경우에만 입사자 정보 창을 띄웁니다.
+                if (nextHired > (item.hired_count || 0)) {
+                    fetchData();
+                    // 약간의 시차를 두어 테이블 갱신 후 팝업
+                    setTimeout(() => {
+                        const updatedItem = savedList.find(i => i.id === item.id);
+                        openOnboarderModal(updatedItem);
+                    }, 300);
+                } else {
+                    fetchData();
+                }
+            }
+        }
+
+        // --- 기존 유틸리티 함수들 ---
+        async function saveData() {
+            const editId = document.getElementById('editId').value;
+            const item = {
+                branch: currentBranch, region: document.getElementById('newRegion').value,
+                client: document.getElementById('newClient').value, process: document.getElementById('newProcess').value,
+                shift: document.getElementById('newShift').value, gender: document.getElementById('newGender').value,
+                to_count: Number(document.getElementById('newToCount').value),
+                req_date: document.getElementById('newReqDate').value, note: document.getElementById('newNote').value
+            };
+            let error;
+            if (editId) { const { error: err } = await supabaseClient.from('job_requests').update(item).eq('id', editId); error = err; }
+            else { item.hired_count = 0; item.status = '구인 중'; const { error: err } = await supabaseClient.from('job_requests').insert([item]); error = err; }
+            if (!error) { closeModal('toModal'); fetchData(); }
+        }
+
         function openEditModal(item) {
             openModal('toModal');
             document.getElementById('modalModeTitle').innerText = "현황 수정";
@@ -181,55 +267,17 @@
             document.getElementById('newToCount').value = item.to_count;
             document.getElementById('newReqDate').value = item.req_date;
             document.getElementById('newNote').value = item.note || "";
-            document.getElementById('onboarderInfo').value = item.onboarder_info || "";
-        }
-
-        async function saveData() {
-            const editId = document.getElementById('editId').value;
-            const item = {
-                branch: currentBranch, region: document.getElementById('newRegion').value,
-                client: document.getElementById('newClient').value, process: document.getElementById('newProcess').value,
-                shift: document.getElementById('newShift').value, gender: document.getElementById('newGender').value,
-                to_count: Number(document.getElementById('newToCount').value),
-                req_date: document.getElementById('newReqDate').value, note: document.getElementById('newNote').value,
-                onboarder_info: document.getElementById('onboarderInfo').value
-            };
-
-            let error;
-            if (editId) {
-                // 수정 모드
-                const { error: err } = await supabaseClient.from('job_requests').update(item).eq('id', editId);
-                error = err;
-            } else {
-                // 신규 등록 모드
-                item.hired_count = 0;
-                item.status = '구인 중';
-                const { error: err } = await supabaseClient.from('job_requests').insert([item]);
-                error = err;
-            }
-
-            if (!error) { closeModal('toModal'); fetchData(); } else { alert("저장 실패: " + error.message); }
-        }
-
-        async function updateHired(item) {
-            let nextHired = (item.hired_count || 0) + 1;
-            let nextStatus = nextHired >= item.to_count ? '합격' : '진행 중';
-            if (item.status === '합격') { nextHired = 0; nextStatus = '구인 중'; }
-            await supabaseClient.from('job_requests').update({ hired_count: nextHired, status: nextStatus }).eq('id', item.id);
-            fetchData();
         }
 
         function downloadExcel() {
             let csv = "\uFEFF지역,거래처,공정,근무형태,성별,채용수,TO,요청일,상태,비고,입사자정보\n";
             savedList.forEach(i => { csv += `${i.region},${i.client},${i.process},${i.shift},${i.gender},${i.hired_count},${i.to_count},${i.req_date},${i.status},${(i.note||"").replace(/,/g," ")},${(i.onboarder_info||"").replace(/,/g," ")}\n`; });
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
+            const link = document.createElement("a"); link.href = URL.createObjectURL(blob);
             link.download = `${currentBranch}_현황_${new Date().toISOString().substring(0,10)}.csv`;
             link.click();
         }
 
-        // 기존 유틸리티 함수들
         function addBranch() { const n = prompt("새 사업부 이름:"); if (n && !branchList.includes(n)) { branchList.push(n); branchRegionData[n] = []; localStorage.setItem('myBranchList', JSON.stringify(branchList)); localStorage.setItem('branchRegionData', JSON.stringify(branchRegionData)); switchBranch(n); } }
         function deleteCurrentBranch() { if (branchList.length <= 1) return; if (confirm(`삭제?`)) { branchList = branchList.filter(b => b !== currentBranch); delete branchRegionData[currentBranch]; localStorage.setItem('myBranchList', JSON.stringify(branchList)); localStorage.setItem('branchRegionData', JSON.stringify(branchRegionData)); switchBranch(branchList[0]); } }
         function renderDashboard() { const db = document.getElementById('dashboard'); db.innerHTML = ""; let summary = {}; (branchRegionData[currentBranch] || []).forEach(r => summary[r] = 0); savedList.forEach(i => { if (summary[i.region] !== undefined) summary[i.region] += (i.to_count - (i.hired_count || 0)); }); for (let r in summary) db.innerHTML += `<div class="dash-card"><b>${r}</b><span class="count">${summary[r]}명</span></div>`; }
@@ -241,12 +289,9 @@
             if(id === 'toModal') {
                 document.getElementById('modalModeTitle').innerText = "신규 등록";
                 document.getElementById('editId').value = "";
-                document.getElementById('modalBranch').innerText = currentBranch;
                 document.getElementById('newReqDate').value = new Date().toISOString().substring(0, 10);
-                // 입력 필드 초기화
-                ['newClient', 'newProcess', 'newShift', 'newNote', 'onboarderInfo'].forEach(id => document.getElementById(id).value = "");
-                document.getElementById('newGender').value = "무관";
-                document.getElementById('newToCount').value = 1;
+                ['newClient', 'newProcess', 'newShift', 'newNote'].forEach(id => document.getElementById(id).value = "");
+                document.getElementById('newGender').value = "무관"; document.getElementById('newToCount').value = 1;
             }
             if(id === 'regionModal') document.getElementById('regModalBranch').innerText = currentBranch;
             document.getElementById(id).style.display = 'flex'; 
