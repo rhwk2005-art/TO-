@@ -4,9 +4,9 @@
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta charset="UTF-8">
-    <title>통합 TO 현황 포털 V8.1 (Full Feature)</title>
+    <title>통합 TO 현황 포털 V8.4 (Mobile Perfect)</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         /* =======================================================
@@ -16,65 +16,60 @@
         body { font-family: 'Pretendard', '맑은 고딕', 'Apple SD Gothic Neo', sans-serif; padding: 0; background-color: #f1f5f9; color: #334155; margin: 0; line-height: 1.5; -webkit-font-smoothing: antialiased; }
         
         #welcomeGate { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2000; color: white; }
-        .gate-content { text-align: center; width: 90%; max-width: 500px; }
+        .gate-content { text-align: center; width: 90%; max-width: 500px; padding: 20px; }
         .branch-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 30px; }
         .branch-card { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); padding: 25px 15px; border-radius: 12px; cursor: pointer; transition: all 0.2s ease; font-weight: 700; font-size: 1.1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .branch-card:hover { background: white; color: var(--primary); transform: translateY(-3px); box-shadow: 0 10px 15px rgba(0,0,0,0.15); }
         
-        #mainApp { display: none; padding: 20px; max-width: 1300px; margin: 0 auto; }
+        #mainApp { display: none; padding: 20px; max-width: 1300px; margin: 0 auto; box-sizing: border-box; }
         .header-container { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 3px solid var(--primary); padding-bottom: 12px; margin-bottom: 20px; }
         h2 { color: var(--primary); margin: 0; font-weight: 800; font-size: 1.8rem; letter-spacing: -0.5px; }
 
         /* =======================================================
            [2] 탭 & 대시보드
            ======================================================= */
-        .tab-container { display: flex; gap: 6px; margin-bottom: 25px; border-bottom: 2px solid var(--gray-border); overflow-x: auto; align-items: flex-end; padding-bottom: 0; }
-        .tab { padding: 12px 24px; cursor: pointer; background: #e2e8f0; border-radius: 8px 8px 0 0; font-weight: 700; color: #64748b; transition: all 0.2s; font-size: 0.95rem; }
+        .tab-container { display: flex; gap: 6px; margin-bottom: 25px; border-bottom: 2px solid var(--gray-border); overflow-x: auto; align-items: flex-end; padding-bottom: 0; -webkit-overflow-scrolling: touch; }
+        .tab { padding: 12px 24px; cursor: pointer; background: #e2e8f0; border-radius: 8px 8px 0 0; font-weight: 700; color: #64748b; transition: all 0.2s; font-size: 0.95rem; white-space: nowrap; flex-shrink: 0; }
         .tab.active { background: var(--primary); color: white; }
-        .tab-add-btn { padding: 10px 16px; cursor: pointer; color: var(--primary); font-weight: 700; border: 1px dashed var(--primary); background: transparent; border-radius: 6px; font-size: 0.85rem; margin-bottom: 6px; margin-left: auto; transition: 0.2s; }
+        .tab-add-btn { padding: 10px 16px; cursor: pointer; color: var(--primary); font-weight: 700; border: 1px dashed var(--primary); background: transparent; border-radius: 6px; font-size: 0.85rem; margin-bottom: 6px; margin-left: auto; transition: 0.2s; white-space: nowrap; flex-shrink: 0; }
         .tab-add-btn:hover { background: rgba(11, 43, 94, 0.05); }
 
         .dashboard-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px; margin-bottom: 25px; }
         .dash-card { background: white; border-top: 4px solid var(--primary); border-radius: 8px; padding: 20px 15px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: transform 0.2s; }
-        .dash-card:hover { transform: translateY(-2px); }
         .dash-card b { color: #64748b; font-size: 0.9rem; font-weight: 600; display: block; margin-bottom: 8px; }
         .dash-card .count { font-size: 1.8rem; font-weight: 800; color: var(--primary); line-height: 1; }
 
         /* =======================================================
            [3] 버튼 시스템
            ======================================================= */
-        .action-bar { display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap; justify-content: flex-end; align-items: center; }
+        .action-bar { display: flex; gap: 8px; margin-bottom: 15px; justify-content: flex-end; align-items: center; }
         .btn { padding: 9px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.85rem; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s; height: 38px; box-sizing: border-box; }
         .btn:active { transform: scale(0.97); }
         .btn-main { background-color: var(--primary); color: white; }
-        .btn-main:hover { background-color: var(--primary-hover); }
         .btn-sub { background-color: #64748b; color: white; }
-        .btn-sub:hover { background-color: #475569; }
         .btn-green { background-color: var(--success); color: white; }
         .btn-outline { background-color: white; border: 1px solid #cbd5e1; color: #475569; }
-        .btn-outline:hover { background-color: #f8fafc; border-color: #94a3b8; }
         .btn-danger-outline { background-color: white; border: 1px solid #fca5a5; color: var(--danger); }
-        .btn-danger-outline:hover { background-color: #fef2f2; border-color: var(--danger); }
 
         /* =======================================================
            [4] 데이터 테이블
            ======================================================= */
-        .table-container { overflow-x: auto; background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid var(--gray-border); }
+        .table-wrapper { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid var(--gray-border); background: white; }
         table { width: 100%; border-collapse: collapse; text-align: center; font-size: 0.9rem; }
         th { background-color: var(--primary); color: white; padding: 14px 10px; font-weight: 600; white-space: nowrap; }
-        /* 행 배경색은 스크립트에서 지역별 파스텔톤으로 덮어씌워집니다. */
         td { padding: 12px 10px; border-bottom: 1px solid rgba(0,0,0,0.03); vertical-align: middle; color: #334155; }
+        tr:hover { background-color: #f8fafc; }
         
-        .status-badge { padding: 5px 12px; border-radius: 20px; font-weight: 700; font-size: 0.8rem; display: inline-block; cursor: pointer; user-select: none; }
+        .status-badge { padding: 5px 12px; border-radius: 20px; font-weight: 700; font-size: 0.8rem; display: inline-block; cursor: pointer; user-select: none; white-space: nowrap; }
         .badge-ing { background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; }
         .badge-done { background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; }
         .badge-partial { background: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; }
 
-        .info-badge { display: inline-flex; align-items: center; gap: 4px; background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; cursor: pointer; border: 1px solid #bbf7d0; transition: 0.2s; margin-top: 6px; }
+        .info-badge { display: inline-flex; align-items: center; gap: 4px; background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; cursor: pointer; border: 1px solid #bbf7d0; margin-top: 6px; white-space: nowrap; }
         .info-badge:hover { background: #bbf7d0; }
 
         /* =======================================================
-           [5] 모달창 및 특수 속성
+           [5] 모달창
            ======================================================= */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(2px); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 15px; box-sizing: border-box; }
         .modal-content { background: white; padding: 30px; border-radius: 16px; width: 100%; max-width: 440px; box-sizing: border-box; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); max-height: 90vh; overflow-y: auto; }
@@ -82,9 +77,8 @@
         
         .input-group { margin-bottom: 15px; text-align: left; }
         .input-group label { display: block; font-size: 0.85rem; font-weight: 700; margin-bottom: 6px; color: #475569; }
-        input, select, textarea { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 0.95rem; font-family: inherit; transition: border-color 0.2s; height: 42px; }
+        input, select, textarea { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 0.95rem; font-family: inherit; height: 42px; }
         textarea { height: auto; min-height: 120px; resize: vertical; }
-        input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(11, 43, 94, 0.1); }
 
         .flex-input-row { display: flex; gap: 8px; align-items: stretch; height: 42px; }
         .flex-input-row input { flex: 1; height: 100%; margin: 0; }
@@ -96,50 +90,56 @@
         .reg-controls .btn { height: 32px; padding: 0 10px; font-size: 0.8rem; }
 
         .only-print { display: none; }
+        
+        /* =======================================================
+           [6] 📱 모바일 픽셀 퍼펙트 반응형 설계 (20년차의 핵심 비법)
+           ======================================================= */
+        @media (max-width: 768px) {
+            #mainApp { padding: 12px; }
+            
+            /* 헤더 재배열 (버튼과 타이틀 정렬) */
+            .header-container { align-items: center; padding-bottom: 10px; margin-bottom: 15px; }
+            h2 { font-size: 1.5rem; }
+            .header-container .btn { padding: 0 10px; height: 32px; font-size: 0.75rem; }
+
+            /* 대시보드 강제 2열 완벽 비율 */
+            .dashboard-container { grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px; }
+            .dash-card { padding: 15px 10px; }
+            .dash-card .count { font-size: 1.5rem; }
+
+            /* ★ 액션 버튼의 모바일 앱화 (2줄 그리드 꽉 채움) ★ */
+            .action-bar { 
+                display: grid; 
+                grid-template-columns: repeat(2, 1fr); 
+                gap: 8px; 
+                margin-bottom: 15px; 
+            }
+            .action-bar .btn { height: 38px; width: 100%; margin: 0; font-size: 0.8rem; }
+            .action-bar .btn-main { grid-column: span 2; /* 신규 등록은 가장 중요하므로 2칸 차지 */ font-size: 0.9rem; padding: 12px; height: 42px; }
+
+            /* ★ 테이블의 치명적 붕괴 방지 (가로 스크롤 강제) ★ */
+            table { 
+                min-width: 800px; /* 화면이 아무리 좁아도 표는 800px 유지 -> 자연스러운 가로 스크롤 유도 */
+            }
+            th, td { 
+                white-space: nowrap; /* 글자 줄바꿈 절대 방지 (태경정/공 깨짐 현상 완벽 해결) */
+                word-break: keep-all; 
+                padding: 12px 8px; 
+            }
+            
+            /* 모달 패딩 다이어트 */
+            .modal-content { padding: 20px; }
+        }
+
         @media print {
             .no-print { display: none !important; }
             .only-print { display: inline !important; }
             body { background: white; padding: 0; }
             #mainApp { padding: 0; max-width: 100%; }
-            .table-container { border: none; box-shadow: none; }
-            table { border: 1px solid #333; }
+            .table-wrapper { border: none; box-shadow: none; overflow: visible; }
+            table { border: 1px solid #333; min-width: 100%; }
             th { background-color: #eee !important; color: black !important; border: 1px solid #333; }
-            td { border: 1px solid #333; padding: 8px; }
-        }
-
-        /* =======================================================
-           [6] 모바일 반응형 최적화 (뷰포트 768px 이하 화면 축소)
-           ======================================================= */
-        @media (max-width: 768px) {
-            /* 1. 전체 폰트 및 제목 축소 */
-            body { font-size: 14px; }
-            h2 { font-size: 1.4rem; }
-            #welcomeGate h1 { font-size: 1.6rem; }
-            .gate-content p { font-size: 0.95rem; margin-bottom: 25px; }
-            .branch-card { font-size: 1rem; padding: 15px 10px; }
-
-            /* 2. 대시보드 카드 및 탭 슬림화 */
-            .dashboard-container { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; margin-bottom: 15px; }
-            .dash-card { padding: 12px 10px; }
-            .dash-card .count { font-size: 1.4rem; }
-            .tab { padding: 10px 14px; font-size: 0.85rem; }
-            .tab-add-btn { padding: 8px 12px; font-size: 0.75rem; }
-
-            /* 3. 버튼 크기 및 여백 압축 */
-            .btn { height: 32px; padding: 0 10px; font-size: 0.75rem; gap: 4px; }
-            .action-bar { gap: 6px; margin-bottom: 10px; }
-
-            /* 4. 데이터 표(Table) 극한의 공간 활용 */
-            th { padding: 10px 5px; font-size: 0.8rem; }
-            td { padding: 8px 5px; font-size: 0.8rem; }
-            .status-badge { padding: 4px 8px; font-size: 0.7rem; }
-            .info-badge { padding: 3px 6px; font-size: 0.7rem; }
-
-            /* 5. 모달창 내 입력 폼 슬림화 */
-            .modal-content { padding: 20px; }
-            input, select, textarea { padding: 8px 10px; font-size: 0.85rem; height: 38px; }
-            .flex-input-row { height: 38px; }
-            .reg-controls .btn { height: 28px; padding: 0 8px; }
+            td { border: 1px solid #333; padding: 8px; white-space: normal; }
         }
     </style>
 </head>
@@ -156,11 +156,11 @@
 
     <div id="mainApp">
         <div class="header-container">
-            <div style="display: flex; align-items: flex-end; gap: 15px;">
-                <button class="btn btn-outline no-print" onclick="goHome()" style="height: 34px; padding: 0 12px;">🏠 홈으로</button>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <button class="btn btn-outline no-print" onclick="goHome()">🏠 홈으로</button>
                 <h2 id="branchTitle">사업부 현황</h2>
             </div>
-            <button class="btn btn-outline no-print" onclick="location.reload()" style="height: 34px; padding: 0 12px; font-size:0.8rem;">🔄 새로고침</button>
+            <button class="btn btn-outline no-print" onclick="location.reload()">🔄 새로고침</button>
         </div>
 
         <div class="tab-container" id="tabBar"></div>
@@ -174,7 +174,7 @@
             <button class="btn btn-main" onclick="openModal('toModal')">➕ 신규 등록</button>
         </div>
 
-        <div class="table-container">
+        <div class="table-wrapper">
             <table>
                 <thead>
                     <tr>
@@ -239,6 +239,7 @@
     </div></div>
 
     <script>
+        // 자바스크립트 로직 (기능 원형 100% 보존 - 비밀번호, 파스텔톤, 실시간, PWA 뒤로가기)
         const supabaseUrl = 'https://qagmgwxmwpgemvstxpcm.supabase.co';
         const supabaseKey = 'sb_publishable_fgRLgnrBmlAIAbEozTWAfg_-xWW3INd';
         const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
@@ -248,7 +249,6 @@
         let currentBranch = "";
         let savedList = [];
         
-        // [기능 복구 1] 눈이 편안한 파스텔톤 지역별 색상 맵핑
         const regionColors = ['#f4f8fb', '#f2fbf5', '#fffdf2', '#fcf5ff', '#fff5f5', '#f5ffff'];
 
         window.onload = () => { syncFromCloud(); subscribeRealtime(); };
@@ -290,16 +290,11 @@
         }
 
         async function switchBranch(name) {
-            // [기능 복구 2] 사업부 진입 시 비밀번호 검증 로직 재적용
             const { data } = await supabaseClient.from('branch_access').select('password').eq('branch_name', name).single();
             if (data && data.password) {
                 const input = prompt(`🔒 '${name}' 보안 비밀번호를 입력하세요:`);
-                if (input !== data.password) { 
-                    alert("비밀번호가 일치하지 않습니다."); 
-                    return; 
-                }
+                if (input !== data.password) { alert("비밀번호가 일치하지 않습니다."); return; }
             }
-
             currentBranch = name;
             document.getElementById('branchTitle').innerText = currentBranch;
             document.getElementById('welcomeGate').style.display = 'none';
@@ -309,19 +304,13 @@
 
         function renderTable() {
             const body = document.getElementById('tableBody'); body.innerHTML = "";
-            
-            // 색상 맵 생성 (지역별 고유 파스텔톤 적용)
             const colorMap = {}; 
             const regions = branchRegionData[currentBranch] || [];
             regions.forEach((reg, idx) => colorMap[reg] = regionColors[idx % regionColors.length]);
 
             savedList.forEach(item => {
                 let row = body.insertRow(-1);
-                
-                // 해당 지역의 배경색 적용
-                if (colorMap[item.region]) {
-                    row.style.backgroundColor = colorMap[item.region];
-                }
+                if (colorMap[item.region]) { row.style.backgroundColor = colorMap[item.region]; }
 
                 row.insertCell(0).innerHTML = `<b>${item.region}</b>`;
                 row.insertCell(1).innerText = item.client;
@@ -333,7 +322,7 @@
                 
                 let dCell = row.insertCell(4);
                 dCell.innerText = item.req_date;
-                if ((new Date() - new Date(item.req_date)) / 86400000 >= 7 && item.status !== '합격') dCell.style.color = "var(--danger)"; dCell.style.fontWeight = "bold";
+                if ((new Date() - new Date(item.req_date)) / 86400000 >= 7 && item.status !== '합격') { dCell.style.color = "var(--danger)"; dCell.style.fontWeight = "bold"; }
 
                 let sCell = row.insertCell(5);
                 let badgeClass = item.status === '합격' ? 'badge-done' : (item.hired_count > 0 ? 'badge-partial' : 'badge-ing');
@@ -424,7 +413,6 @@
         async function saveOnboarderInfo() { await supabaseClient.from('job_requests').update({ onboarder_info: document.getElementById('onboarderInput').value }).eq('id', document.getElementById('onboarderEditId').value); closeModal('onboarderModal'); fetchData(); }
         function openOnboarderModal(item) { document.getElementById('onboarderEditId').value = item.id; document.getElementById('onboarderInput').value = item.onboarder_info || ""; openModal('onboarderModal'); }
 
-        // 안드로이드 앱 뒤로가기 제어
         document.addEventListener('backbutton', (e) => {
             e.preventDefault();
             if (document.querySelector('.modal-overlay[style*="flex"]')) { closeModal('toModal'); closeModal('regionModal'); closeModal('onboarderModal'); }
