@@ -281,6 +281,19 @@
             }
         }
 
+        // [보완] 안드로이드 뒤로가기 버튼 제어 (Capacitor App 플러그인 필요)
+document.addEventListener('backbutton', function (e) {
+    e.preventDefault();
+    // 현재 페이지에서 뒤로 갈 수 있으면 뒤로 가고, 아니면 종료 확인
+    if (window.history.length > 1) {
+        window.history.back();
+    } else {
+        if (confirm("앱을 종료하시겠습니까?")) {
+            navigator.app.exitApp();
+        }
+    }
+}, false);
+
         // --- 기타 기능 함수들 ---
         async function addBranch() { const n = prompt("새 사업부 이름:"); if (n && !branchList.includes(n)) { branchList.push(n); branchRegionData[n] = []; await syncToCloud(); renderGate(); } }
         function renderTabs() { const bar = document.getElementById('tabBar'); bar.innerHTML = ""; branchList.forEach(b => { const t = document.createElement('div'); t.className = `tab ${b === currentBranch ? 'active' : ''}`; t.innerText = b; t.onclick = () => switchBranch(b); bar.appendChild(t); }); const addBtn = document.createElement('div'); addBtn.className = "tab-add-btn"; addBtn.innerText = "+ 사업부 추가"; addBtn.onclick = addBranch; bar.appendChild(addBtn); }
