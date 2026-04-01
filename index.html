@@ -106,6 +106,41 @@
             th { background-color: #eee !important; color: black !important; border: 1px solid #333; }
             td { border: 1px solid #333; padding: 8px; }
         }
+
+        /* =======================================================
+           [6] 모바일 반응형 최적화 (뷰포트 768px 이하 화면 축소)
+           ======================================================= */
+        @media (max-width: 768px) {
+            /* 1. 전체 폰트 및 제목 축소 */
+            body { font-size: 14px; }
+            h2 { font-size: 1.4rem; }
+            #welcomeGate h1 { font-size: 1.6rem; }
+            .gate-content p { font-size: 0.95rem; margin-bottom: 25px; }
+            .branch-card { font-size: 1rem; padding: 15px 10px; }
+
+            /* 2. 대시보드 카드 및 탭 슬림화 */
+            .dashboard-container { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; margin-bottom: 15px; }
+            .dash-card { padding: 12px 10px; }
+            .dash-card .count { font-size: 1.4rem; }
+            .tab { padding: 10px 14px; font-size: 0.85rem; }
+            .tab-add-btn { padding: 8px 12px; font-size: 0.75rem; }
+
+            /* 3. 버튼 크기 및 여백 압축 */
+            .btn { height: 32px; padding: 0 10px; font-size: 0.75rem; gap: 4px; }
+            .action-bar { gap: 6px; margin-bottom: 10px; }
+
+            /* 4. 데이터 표(Table) 극한의 공간 활용 */
+            th { padding: 10px 5px; font-size: 0.8rem; }
+            td { padding: 8px 5px; font-size: 0.8rem; }
+            .status-badge { padding: 4px 8px; font-size: 0.7rem; }
+            .info-badge { padding: 3px 6px; font-size: 0.7rem; }
+
+            /* 5. 모달창 내 입력 폼 슬림화 */
+            .modal-content { padding: 20px; }
+            input, select, textarea { padding: 8px 10px; font-size: 0.85rem; height: 38px; }
+            .flex-input-row { height: 38px; }
+            .reg-controls .btn { height: 28px; padding: 0 8px; }
+        }
     </style>
 </head>
 <body>
